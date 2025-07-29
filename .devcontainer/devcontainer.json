@@ -1,0 +1,14 @@
+{
+	"name" : "go-url-shortner",
+	"dockerComposeFile" : "compose.yaml",
+	"service" : "app",
+	"workspaceFolder" : "/workspace",
+	"customizations": {
+		"extensions": [
+			"golang.go",
+			"vscode-icons-team.vscode-icons",
+			"postman.postman-for-vscode",
+			"ms-vscode.makefile-tools"
+		]
+	}
+}
