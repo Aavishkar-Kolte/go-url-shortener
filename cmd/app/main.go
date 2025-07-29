@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"context"
+	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -15,40 +15,52 @@ func main() {
 	rdb := redis.NewClient(&redis.Options{
 		Addr: "redis:6379",
 	})
-
 	defer rdb.Close()
 
-	err := rdb.Set(ctx, "key", "value", 0).Err()
-    if err != nil {
-        panic(err)
-    }
-
-    val, err := rdb.Get(ctx, "key").Result()
-    if err != nil {
-        panic(err)
-    }
-    fmt.Println("key", val)
-
-    val2, err := rdb.Get(ctx, "key2").Result()
-    if err == redis.Nil {
-        fmt.Println("key2 does not exist")
-    } else if err != nil {
-        panic(err)
-    } else {
-        fmt.Println("key2", val2)
-    }
-
 	app := fiber.New()
+	defer app.Shutdown()
 
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World!")
+	app.Get("/:code", func(c *fiber.Ctx) error {
+		shortCode := c.Params("code")
+		log.Println("Short code received:", shortCode)
+
+		url, err := rdb.Get(ctx, shortCode).Result()
+		if err == redis.Nil {
+			log.Fatal("Short code not found in Redis")
+			return c.Status(fiber.StatusNotFound).SendString("Short code not found")
+		} else if err != nil {
+			log.Fatal(err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Error retrieving URL")
+		}
+
+		log.Println("Retrieved URL:", url)
+		return c.Redirect(url, fiber.StatusFound)
 	})
 
 	app.Post("/shorten", func(c *fiber.Ctx) error {
-		fmt.Println("Prams: ", c.Query("age"), c.Query("name"))
-		fmt.Println("Body: ", c.FormValue("username"), c.FormValue("password"))
+		log.Println("/shorten", c.FormValue("url"))
+		url := c.FormValue("url")
+		if url == "" {
+			return c.Status(fiber.StatusBadRequest).SendString("URL is required")
+		}
+
+		shortURL := generateShortURL()
+
+		err := rdb.Set(ctx, shortURL, url, 0).Err()
+		if err != nil {
+			log.Fatal(err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to shorten URL")
+		}
+
+		log.Println("Shortened URL:", shortURL)
+
 		return nil
 	})
 
 	log.Fatal(app.Listen(":3000"))
+}
+
+func generateShortURL() string {
+	// Placeholder function to generate a short URL
+	return uuid.New().String()
 }
