@@ -17,9 +17,13 @@ func Shorten(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString("URL is required")
 	}
 
-	shortURL := utils.GenerateShortURL()
+	shortURL, err := utils.RandomBase62(6)
+	if err != nil {
+		log.Fatal(err)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to generate short URL")
+	}
 
-	err := rdb.Set(context.Background(), shortURL, url, 0).Err()
+	err = rdb.Set(context.Background(), shortURL, url, 0).Err()
 	if err != nil {
 		log.Fatal(err)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to shorten URL")
