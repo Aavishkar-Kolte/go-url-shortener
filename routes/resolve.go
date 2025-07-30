@@ -9,12 +9,22 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type resolveRequest struct {
+	Code string `params:"code"`
+}
+
 func Resolve(c *fiber.Ctx) error {
 	rdb := global.Rdb
-	shortCode := c.Params("code")
-	log.Println("Short code received:", shortCode)
+	var req resolveRequest
 
-	url, err := rdb.Get(context.Background(), shortCode).Result()
+	if err := c.ParamsParser(&req); err != nil {
+		log.Println("Error parsing request query:", err)
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid request format")
+	}
+
+	log.Println("Short code received:", req.Code)
+
+	url, err := rdb.Get(context.Background(), req.Code).Result()
 	if err == redis.Nil {
 		log.Fatal("Short code not found in Redis")
 		return c.Status(fiber.StatusNotFound).SendString("Short code not found")
